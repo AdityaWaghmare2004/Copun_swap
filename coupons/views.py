@@ -75,6 +75,7 @@ def marketplace(request):
         "category__name",
         "platform__name",
         "owner_id",
+        "owner__trust_score",
     )
     return render(
         request,

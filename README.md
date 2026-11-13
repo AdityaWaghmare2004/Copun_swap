@@ -1,4 +1,4 @@
-# Coupon Swap
+# Coupun Swap
 
 A Django monolith for coupon exchange and trading.
 

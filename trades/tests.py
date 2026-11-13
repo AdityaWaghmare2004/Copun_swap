@@ -38,8 +38,8 @@ class TradeWorkflowTests(TestCase):
             username="third-user",
             password="safe-password",
         )
-        category = Category.objects.create(name="Food")
-        platform = Platform.objects.create(name="Zomato")
+        category, _ = Category.objects.get_or_create(name="Food")
+        platform, _ = Platform.objects.get_or_create(name="Zomato")
         expiry_date = timezone.localdate() + timedelta(days=30)
         self.offered_coupon = self._create_coupon(
             owner=self.sender,
@@ -269,8 +269,8 @@ class TradeWorkflowTests(TestCase):
         sender_room = self.client.get(reverse("trades:room", args=(self.trade.pk,)))
         self.assertContains(sender_room, self.requested_coupon.code)
         self.assertNotContains(sender_room, self.offered_coupon.code)
-        self.assertContains(sender_room, "Confirm Trade")
-        self.assertContains(sender_room, "Report Invalid Code")
+        self.assertContains(sender_room, "Code verified")
+        self.assertContains(sender_room, "Code did not work")
 
         self.client.force_login(self.receiver)
         receiver_room = self.client.get(reverse("trades:room", args=(self.trade.pk,)))

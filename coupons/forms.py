@@ -23,6 +23,27 @@ class CouponUploadForm(forms.Form):
     terms = forms.CharField(required=False, widget=forms.Textarea)
     proof_image = forms.ImageField()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = (
+                "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 "
+                "text-slate-900 shadow-sm focus:border-indigo-600 focus:outline-none "
+                "focus:ring-2 focus:ring-indigo-100"
+            )
+        self.fields["terms"].widget.attrs["rows"] = 3
+        self.fields["proof_image"].widget.attrs.update(
+            {
+                "accept": "image/jpeg,image/png,image/webp",
+                "class": (
+                    "block w-full cursor-pointer text-sm text-slate-600 "
+                    "file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 "
+                    "file:px-4 file:py-2.5 file:font-semibold file:text-indigo-700 "
+                    "hover:file:bg-indigo-100"
+                ),
+            }
+        )
+
     def clean_proof_image(self):
         image = self.cleaned_data["proof_image"]
         if image.size > MAX_COUPON_IMAGE_SIZE:
@@ -95,3 +116,12 @@ class MarketplaceFilterForm(forms.Form):
         required=False,
         initial=ExpiryTimeline.ANY,
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = (
+                "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 "
+                "text-slate-900 shadow-sm focus:border-indigo-600 focus:outline-none "
+                "focus:ring-2 focus:ring-indigo-100"
+            )

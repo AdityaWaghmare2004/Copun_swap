@@ -3,19 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Coupon Swap{% endblock %}</title>
+    <title>{% block title %}Coupun Swap{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
     <div class="min-h-screen">
         <nav class="bg-slate-900 text-slate-50 shadow-sm">
             <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-                <a href="{% url 'coupons:marketplace' %}" class="text-lg font-semibold tracking-tight">Coupon Swap</a>
+                <a href="{% url 'coupons:marketplace' %}" class="text-lg font-bold tracking-tight">Coupun Swap</a>
 
                 <button
                     type="button"
-                    class="rounded border border-slate-600 px-3 py-1.5 text-sm md:hidden"
+                    class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 md:hidden"
                     @click="mobileMenuOpen = !mobileMenuOpen"
                     aria-label="Toggle navigation"
                 >
@@ -23,38 +23,38 @@
                 </button>
 
                 <div class="hidden items-center gap-4 md:flex">
-                    <a href="{% url 'coupons:marketplace' %}" class="text-sm hover:text-sky-300">Marketplace</a>
+                    <a href="{% url 'coupons:marketplace' %}" class="text-sm text-slate-200 transition hover:text-indigo-300">Marketplace</a>
                     {% if user.is_authenticated %}
-                        <a href="{% url 'coupons:upload' %}" class="text-sm hover:text-sky-300">Upload</a>
-                        <a href="{% url 'accounts:profile' %}" class="text-sm hover:text-sky-300">Profile</a>
-                        <a href="{% url 'trades:dashboard' %}" class="text-sm hover:text-sky-300">Dashboard</a>
-                        <a href="{% url 'trades:incoming' %}" class="text-sm hover:text-sky-300">Incoming</a>
+                        <a href="{% url 'coupons:upload' %}" class="text-sm text-slate-200 transition hover:text-indigo-300">Upload</a>
+                        <a href="{% url 'trades:dashboard' %}" class="text-sm text-slate-200 transition hover:text-indigo-300">Dashboard</a>
+                        <a href="{% url 'trades:incoming' %}" class="text-sm text-slate-200 transition hover:text-indigo-300">Requests</a>
+                        <a href="{% url 'accounts:profile' %}" class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1.5 text-sm transition hover:bg-slate-800"><span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden="true"></span>Trust <span class="font-semibold">{{ user.trust_score }}</span></a>
                         <form method="post" action="{% url 'accounts:logout' %}" class="inline-flex">
                             {% csrf_token %}
-                            <button type="submit" class="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500">Log out</button>
+                            <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500">Log out</button>
                         </form>
                     {% else %}
-                        <a href="{% url 'accounts:login' %}" class="text-sm hover:text-sky-300">Log in</a>
-                        <a href="{% url 'accounts:signup' %}" class="text-sm hover:text-sky-300">Sign up</a>
+                        <a href="{% url 'accounts:login' %}" class="text-sm text-slate-200 transition hover:text-indigo-300">Log in</a>
+                        <a href="{% url 'accounts:signup' %}" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500">Sign up</a>
                     {% endif %}
                 </div>
             </div>
 
             <div x-show="mobileMenuOpen" x-transition class="border-t border-slate-700 md:hidden">
                 <div class="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 md:px-6">
-                    <a href="{% url 'coupons:marketplace' %}" class="text-sm">Marketplace</a>
+                    <a href="{% url 'coupons:marketplace' %}" class="text-sm text-slate-200 hover:text-indigo-300">Marketplace</a>
                     {% if user.is_authenticated %}
-                        <a href="{% url 'coupons:upload' %}" class="text-sm">Upload</a>
-                        <a href="{% url 'accounts:profile' %}" class="text-sm">Profile</a>
-                        <a href="{% url 'trades:dashboard' %}" class="text-sm">Dashboard</a>
-                        <a href="{% url 'trades:incoming' %}" class="text-sm">Incoming</a>
+                        <a href="{% url 'coupons:upload' %}" class="text-sm text-slate-200 hover:text-indigo-300">Upload coupon</a>
+                        <a href="{% url 'trades:dashboard' %}" class="text-sm text-slate-200 hover:text-indigo-300">Dashboard</a>
+                        <a href="{% url 'trades:incoming' %}" class="text-sm text-slate-200 hover:text-indigo-300">Incoming requests</a>
+                        <a href="{% url 'accounts:profile' %}" class="text-sm text-slate-200 hover:text-indigo-300">Profile · trust {{ user.trust_score }}</a>
                         <form method="post" action="{% url 'accounts:logout' %}">
                             {% csrf_token %}
-                            <button type="submit" class="w-full rounded bg-sky-600 px-3 py-2 text-sm font-medium text-white">Log out</button>
+                            <button type="submit" class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Log out</button>
                         </form>
                     {% else %}
-                        <a href="{% url 'accounts:login' %}" class="text-sm">Log in</a>
-                        <a href="{% url 'accounts:signup' %}" class="text-sm">Sign up</a>
+                        <a href="{% url 'accounts:login' %}" class="text-sm text-slate-200 hover:text-indigo-300">Log in</a>
+                        <a href="{% url 'accounts:signup' %}" class="text-sm text-slate-200 hover:text-indigo-300">Sign up</a>
                     {% endif %}
                 </div>
             </div>
@@ -64,7 +64,7 @@
             {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
-                        <div class="rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm" role="status">
+                        <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm" role="status">
                             {{ message }}
                         </div>
                     {% endfor %}

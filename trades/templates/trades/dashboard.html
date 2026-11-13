@@ -30,7 +30,7 @@
             {% for trade in incoming_requests %}
                 <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">Review request</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="font-medium text-indigo-700 underline">Review request</a>
                 </article>
             {% empty %}
                 <p class="text-slate-600">No incoming requests.</p>
@@ -44,7 +44,7 @@
             {% for trade in outgoing_requests %}
                 <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>Your {{ trade.offered_coupon.title }} for {{ trade.receiver.username }}'s {{ trade.requested_coupon.title }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">View request</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="font-medium text-indigo-700 underline">View request</a>
                 </article>
             {% empty %}
                 <p class="text-slate-600">No outgoing requests.</p>
@@ -57,7 +57,7 @@
                 <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>Trade #{{ trade.pk }} — {{ trade.get_status_display }}</p>
                     <p>Verification deadline: {{ trade.expires_at }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">Open private trade room</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="font-medium text-indigo-700 underline">Open private trade room</a>
                 </article>
             {% empty %}
                 <p class="text-slate-600">No active exchanges.</p>
@@ -75,7 +75,7 @@
                 {% if trade.dispute_reason %}
                     <p>Resolution: {{ trade.get_dispute_reason_display }}</p>
                 {% endif %}
-                <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">View record</a>
+                <a href="{% url 'trades:room' trade.pk %}" class="font-medium text-indigo-700 underline">View record</a>
             </article>
         {% empty %}
             <p class="text-slate-600">No completed or resolved trades yet.</p>

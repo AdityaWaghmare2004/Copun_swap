@@ -26,8 +26,8 @@ class CouponModelTests(TestCase):
             username="coupon-owner",
             password="safe-password",
         )
-        self.category = Category.objects.create(name="Food")
-        self.platform = Platform.objects.create(name="Zomato")
+        self.category, _ = Category.objects.get_or_create(name="Food")
+        self.platform, _ = Platform.objects.get_or_create(name="Zomato")
 
     def test_coupon_defaults_and_relations(self):
         coupon = Coupon.objects.create(
@@ -167,8 +167,8 @@ class CouponUploadTests(TestCase):
             username="uploader",
             password="safe-password",
         )
-        self.category = Category.objects.create(name="Food")
-        self.platform = Platform.objects.create(name="Zomato")
+        self.category, _ = Category.objects.get_or_create(name="Food")
+        self.platform, _ = Platform.objects.get_or_create(name="Zomato")
         self.client.force_login(self.owner)
 
     def _image_upload(self, content_type="image/png"):
@@ -287,10 +287,10 @@ class MarketplaceTests(TestCase):
             username="marketplace-owner",
             password="safe-password",
         )
-        self.food = Category.objects.create(name="Food")
-        self.travel = Category.objects.create(name="Travel")
-        self.zomato = Platform.objects.create(name="Zomato")
-        self.amazon = Platform.objects.create(name="Amazon")
+        self.food, _ = Category.objects.get_or_create(name="Food")
+        self.travel, _ = Category.objects.get_or_create(name="Travel")
+        self.zomato, _ = Platform.objects.get_or_create(name="Zomato")
+        self.amazon, _ = Platform.objects.get_or_create(name="Amazon")
 
     def create_coupon(
         self,
@@ -523,8 +523,8 @@ class CouponUploadValidationTests(TestCase):
             username="uploader",
             password="safe-password",
         )
-        self.category = Category.objects.create(name="Food")
-        self.platform = Platform.objects.create(name="Zomato")
+        self.category, _ = Category.objects.get_or_create(name="Food")
+        self.platform, _ = Platform.objects.get_or_create(name="Zomato")
         self.client.force_login(self.owner)
 
     def _image_upload(self, content_type="image/png"):

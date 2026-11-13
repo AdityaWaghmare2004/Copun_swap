@@ -5,14 +5,14 @@
 {% block content %}
 <div class="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
     <h1 class="mb-4 text-2xl font-semibold">Incoming trade requests</h1>
-    <p class="mb-6 text-slate-600"><a href="{% url 'trades:dashboard' %}" class="text-sky-700 underline">Trade dashboard</a></p>
+    <p class="mb-6 text-slate-600"><a href="{% url 'trades:dashboard' %}" class="font-medium text-indigo-700 underline">Trade dashboard</a></p>
 
     {% for trade in trades %}
         <article class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h2 class="text-lg font-semibold">Request from {{ trade.sender.username }}</h2>
             <p class="mt-2 text-slate-700">{{ trade.sender.username }} offers {{ trade.offered_coupon.title }}</p>
             <p class="text-slate-700">In exchange for your {{ trade.requested_coupon.title }}</p>
-            <a href="{% url 'trades:room' trade.pk %}" class="mt-3 inline-block text-sky-700 underline">Review request</a>
+            <a href="{% url 'trades:room' trade.pk %}" class="mt-3 inline-block font-medium text-indigo-700 underline">Review request</a>
         </article>
     {% empty %}
         <p class="text-slate-600">You have no incoming requests.</p>
