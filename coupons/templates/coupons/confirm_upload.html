@@ -1,34 +1,39 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Confirm coupon details</title>
-</head>
-<body>
-    <main>
-        <h1>Confirm coupon details</h1>
-        <p>Review the details extracted from the proof image for “{{ title }}”.</p>
+{% extends "base.html" %}
+
+{% block title %}Confirm coupon details{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 class="mb-3 text-2xl font-semibold">Confirm coupon details</h1>
+        <p class="text-slate-600">Review the details extracted from the proof image for “{{ title }}”.</p>
+
         {% if ocr_notice %}
-            <p role="status">{{ ocr_notice }}</p>
+            <p role="status" class="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{{ ocr_notice }}</p>
         {% endif %}
+
         {% if ocr_text %}
-            <details>
-                <summary>Show extracted text</summary>
-                <pre>{{ ocr_text }}</pre>
+            <details class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <summary class="cursor-pointer text-sm font-medium text-slate-700">Show extracted text</summary>
+                <pre class="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-sm text-slate-700">{{ ocr_text }}</pre>
             </details>
         {% endif %}
-        <form method="post">
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <form method="post" class="space-y-4">
             {% csrf_token %}
             <input type="hidden" name="step" value="confirm">
             {{ form.as_p }}
-            <button type="submit">Confirm and save coupon</button>
+            <button type="submit" class="rounded bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-500">Confirm and save coupon</button>
         </form>
-        <form method="post">
+
+        <form method="post" class="mt-4">
             {% csrf_token %}
             <input type="hidden" name="step" value="cancel">
             <input type="hidden" name="upload_token" value="{{ form.upload_token.value }}">
-            <button type="submit">Discard and start over</button>
+            <button type="submit" class="rounded border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50">Discard and start over</button>
         </form>
-    </main>
-</body>
-</html>
+    </section>
+</div>
+{% endblock %}

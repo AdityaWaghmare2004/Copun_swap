@@ -1,98 +1,101 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Trade dashboard</title>
-</head>
-<body>
-    <main>
-        <h1>{{ user.username }}'s trade dashboard</h1>
+{% extends "base.html" %}
+
+{% block title %}Trade dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 class="mb-2 text-2xl font-semibold">{{ user.username }}'s trade dashboard</h1>
         {% if user.requires_review %}
-            <p role="status">Your account is flagged for administrative review.</p>
+            <p role="status" class="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Your account is flagged for administrative review.</p>
         {% endif %}
+    </section>
 
-        <section>
-            <h2>Active listings</h2>
+    <div class="grid gap-6 md:grid-cols-2">
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-xl font-semibold">Active listings</h2>
             {% for coupon in listings %}
-                <article>
-                    <h3>{{ coupon.title }}</h3>
-                    <p>{{ coupon.category__name }} on {{ coupon.platform__name }}</p>
-                    <p>Expires {{ coupon.expiry_date }}</p>
+                <article class="mb-3 rounded-lg bg-slate-50 p-4">
+                    <h3 class="font-semibold">{{ coupon.title }}</h3>
+                    <p class="text-sm text-slate-600">{{ coupon.category__name }} on {{ coupon.platform__name }}</p>
+                    <p class="text-sm text-slate-600">Expires {{ coupon.expiry_date }}</p>
                 </article>
             {% empty %}
-                <p>You have no active listings.</p>
+                <p class="text-slate-600">You have no active listings.</p>
             {% endfor %}
         </section>
 
-        <section>
-            <h2>Incoming requests</h2>
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-xl font-semibold">Incoming requests</h2>
             {% for trade in incoming_requests %}
-                <article>
+                <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}">Review request</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">Review request</a>
                 </article>
             {% empty %}
-                <p>No incoming requests.</p>
+                <p class="text-slate-600">No incoming requests.</p>
             {% endfor %}
         </section>
+    </div>
 
-        <section>
-            <h2>Outgoing requests</h2>
+    <div class="grid gap-6 md:grid-cols-2">
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-xl font-semibold">Outgoing requests</h2>
             {% for trade in outgoing_requests %}
-                <article>
+                <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>Your {{ trade.offered_coupon.title }} for {{ trade.receiver.username }}'s {{ trade.requested_coupon.title }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}">View request</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">View request</a>
                 </article>
             {% empty %}
-                <p>No outgoing requests.</p>
+                <p class="text-slate-600">No outgoing requests.</p>
             {% endfor %}
         </section>
 
-        <section>
-            <h2>Active exchanges</h2>
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-xl font-semibold">Active exchanges</h2>
             {% for trade in active_trades %}
-                <article>
+                <article class="mb-3 rounded-lg bg-slate-50 p-4">
                     <p>Trade #{{ trade.pk }} — {{ trade.get_status_display }}</p>
                     <p>Verification deadline: {{ trade.expires_at }}</p>
-                    <a href="{% url 'trades:room' trade.pk %}">Open private trade room</a>
+                    <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">Open private trade room</a>
                 </article>
             {% empty %}
-                <p>No active exchanges.</p>
+                <p class="text-slate-600">No active exchanges.</p>
             {% endfor %}
         </section>
+    </div>
 
-        <section>
-            <h2>Trade history</h2>
-            {% for trade in trade_history %}
-                <article>
-                    <h3>Trade #{{ trade.pk }} — {{ trade.get_status_display }}</h3>
-                    <p>{{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
-                    <p>Updated {{ trade.updated_at }}</p>
-                    {% if trade.dispute_reason %}
-                        <p>Resolution: {{ trade.get_dispute_reason_display }}</p>
-                    {% endif %}
-                    <a href="{% url 'trades:room' trade.pk %}">View record</a>
-                </article>
-            {% empty %}
-                <p>No completed or resolved trades yet.</p>
-            {% endfor %}
-        </section>
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-semibold">Trade history</h2>
+        {% for trade in trade_history %}
+            <article class="mb-3 rounded-lg bg-slate-50 p-4">
+                <h3 class="font-semibold">Trade #{{ trade.pk }} — {{ trade.get_status_display }}</h3>
+                <p>{{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
+                <p>Updated {{ trade.updated_at }}</p>
+                {% if trade.dispute_reason %}
+                    <p>Resolution: {{ trade.get_dispute_reason_display }}</p>
+                {% endif %}
+                <a href="{% url 'trades:room' trade.pk %}" class="text-sky-700 underline">View record</a>
+            </article>
+        {% empty %}
+            <p class="text-slate-600">No completed or resolved trades yet.</p>
+        {% endfor %}
+    </section>
 
-        <section>
-            <h2>Audit history</h2>
-            {% for event in audit_events %}
-                <article>
-                    <p>
-                        Trade #{{ event.trade_id }}:
-                        {{ event.get_event_type_display }}
-                        {% if event.actor %}by {{ event.actor.username }}{% endif %}
-                        at {{ event.created_at }}
-                    </p>
-                </article>
-            {% empty %}
-                <p>No trade events recorded.</p>
-            {% endfor %}
-        </section>
-    </main>
-</body>
-</html>
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-semibold">Audit history</h2>
+        {% for event in audit_events %}
+            <article class="mb-2 rounded-lg bg-slate-50 p-3">
+                <p>
+                    Trade #{{ event.trade_id }}:
+                    {{ event.get_event_type_display }}
+                    {% if event.actor %}by {{ event.actor.username }}{% endif %}
+                    at {{ event.created_at }}
+                </p>
+            </article>
+        {% empty %}
+            <p class="text-slate-600">No trade events recorded.</p>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

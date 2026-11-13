@@ -364,6 +364,38 @@ class MarketplaceTests(TestCase):
         self.assertNotIn("code", response.context["coupons"][0])
         self.assertNotIn("code_hash", response.context["coupons"][0])
 
+    def test_marketplace_excludes_logged_in_users_own_listings(self):
+        other_owner = get_user_model().objects.create_user(
+            username="other-owner",
+        )
+        own_listing = self.create_coupon(
+            title="My coupon",
+            code="OWNSECRET123",
+            expiry_date=timezone.localdate() + timedelta(days=10),
+        )
+        other_listing = Coupon.objects.create(
+            owner=other_owner,
+            category=self.food,
+            platform=self.zomato,
+            title="Other user's coupon",
+            code="OTHERSECRET456",
+            terms="Marketplace search terms",
+            expiry_date=timezone.localdate() + timedelta(days=8),
+            proof_image="coupons/proofs/othersecret.png",
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("coupons:marketplace"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, own_listing.title)
+        self.assertEqual(
+            [coupon["title"] for coupon in response.context["coupons"]],
+            [other_listing.title],
+        )
+        self.assertNotContains(response, "OWNSECRET123")
+        self.assertNotContains(response, "OTHERSECRET456")
+
     def test_marketplace_filters_by_keyword_category_and_platform(self):
         match = self.create_coupon(
             title="Family dinner",

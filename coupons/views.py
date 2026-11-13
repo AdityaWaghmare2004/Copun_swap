@@ -28,6 +28,8 @@ def _pending_storage():
 def marketplace(request):
     form = MarketplaceFilterForm(request.GET or None)
     coupons = Coupon.objects.filter(status=Coupon.Status.AVAILABLE)
+    if request.user.is_authenticated:
+        coupons = coupons.exclude(owner=request.user)
 
     if form.is_bound and not form.is_valid():
         coupons = coupons.none()

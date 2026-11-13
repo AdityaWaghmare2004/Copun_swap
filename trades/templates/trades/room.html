@@ -1,79 +1,100 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Trade #{{ trade.pk }}</title>
-</head>
-<body>
-    <main>
-        <h1>Trade #{{ trade.pk }}</h1>
-        {% for message in messages %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
-        <p>Status: {{ trade.get_status_display }}</p>
-        <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }}</p>
-        <p>{{ trade.receiver.username }} offers {{ trade.requested_coupon.title }}</p>
+{% extends "base.html" %}
 
-        {% if trade.status == "PROPOSED" and user.pk == trade.receiver_id %}
-            <form method="post" action="{% url 'trades:accept' trade.pk %}">
+{% block title %}Trade #{{ trade.pk }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 class="mb-3 text-2xl font-semibold">Trade #{{ trade.pk }}</h1>
+        <p class="text-slate-600">Status: {{ trade.get_status_display }}</p>
+        <p class="mt-2 text-slate-700">{{ trade.sender.username }} offers {{ trade.offered_coupon.title }}</p>
+        <p class="text-slate-700">{{ trade.receiver.username }} offers {{ trade.requested_coupon.title }}</p>
+    </section>
+
+    {% if trade.status == "PROPOSED" and user.pk == trade.receiver_id %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form method="post" action="{% url 'trades:accept' trade.pk %}" class="space-y-3">
                 {% csrf_token %}
-                <button type="submit">Accept trade</button>
+                <button type="submit" class="rounded bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-500">Accept trade</button>
             </form>
-            <form method="post" action="{% url 'trades:decline' trade.pk %}">
+            <form method="post" action="{% url 'trades:decline' trade.pk %}" class="mt-3">
                 {% csrf_token %}
-                <button type="submit">Decline trade</button>
+                <button type="submit" class="rounded border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50">Decline trade</button>
             </form>
-        {% elif trade.status == "PROPOSED" %}
-            <p>Waiting for the receiver to respond. Your offered coupon is locked pending their decision.</p>
-        {% elif trade.status == "ACTIVE_EXCHANGE" %}
-            <p id="verification-timer" data-expires-at="{{ trade.expires_at|date:'c' }}">
-                Verification time remaining: <time>{{ trade.expires_at|timeuntil }}</time>
+        </section>
+    {% elif trade.status == "PROPOSED" %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-slate-700">Waiting for the receiver to respond. Your offered coupon is locked pending their decision.</p>
+        </section>
+    {% elif trade.status == "ACTIVE_EXCHANGE" %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" x-data="tradeTimer('{{ trade.expires_at|date:'c' }}')">
+            <p class="text-lg font-medium text-slate-800">
+                Verification time remaining: <span x-text="countdownText" class="font-semibold text-sky-700"></span>
             </p>
+
             {% if offered_code %}
-                <section>
-                    <h2>Code received</h2>
-                    <code>{{ offered_code }}</code>
-                    <p>Apply this code on its platform before confirming.</p>
-                </section>
+                <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <h2 class="text-lg font-semibold">Code received</h2>
+                    <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-slate-800">{{ offered_code }}</code>
+                    <p class="mt-2 text-sm text-slate-600">Apply this code on its platform before confirming.</p>
+                </div>
             {% endif %}
+
             {% if requested_code %}
-                <section>
-                    <h2>Code received</h2>
-                    <code>{{ requested_code }}</code>
-                    <p>Apply this code on its platform before confirming.</p>
-                </section>
+                <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <h2 class="text-lg font-semibold">Code received</h2>
+                    <code class="mt-2 block break-all rounded bg-white px-3 py-2 font-mono text-slate-800">{{ requested_code }}</code>
+                    <p class="mt-2 text-sm text-slate-600">Apply this code on its platform before confirming.</p>
+                </div>
             {% endif %}
-            <form method="post" action="{% url 'trades:respond' trade.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="response" value="verified">
-                <button type="submit">Confirm Trade</button>
-            </form>
-            <form method="post" action="{% url 'trades:respond' trade.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="response" value="invalid">
-                <button type="submit">Report Invalid Code</button>
-            </form>
-            <script>
-                const timer = document.getElementById("verification-timer");
-                const time = timer.querySelector("time");
-                const deadline = Date.parse(timer.dataset.expiresAt);
-                const updateTimer = () => {
-                    const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-                    time.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
-                    if (remaining === 0) {
-                        window.location.reload();
-                    }
-                };
-                updateTimer();
-                window.setInterval(updateTimer, 1000);
-            </script>
-        {% elif trade.status == "COMPLETED" %}
-            <p>Exchange complete. The coupon codes are no longer available in this room.</p>
-        {% elif trade.status == "DISPUTED" %}
-            <p>This exchange is quarantined for review.</p>
-        {% elif trade.status == "CANCELLED" %}
-            <p>This request was cancelled. No coupon codes were disclosed.</p>
-        {% endif %}
-    </main>
-</body>
-</html>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+                <form method="post" action="{% url 'trades:respond' trade.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="response" value="verified">
+                    <button type="submit" class="rounded bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-500">Confirm Trade</button>
+                </form>
+                <form method="post" action="{% url 'trades:respond' trade.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="response" value="invalid">
+                    <button type="submit" class="rounded border border-rose-300 bg-rose-50 px-4 py-2 font-medium text-rose-700 hover:bg-rose-100">Report Invalid Code</button>
+                </form>
+            </div>
+        </section>
+    {% elif trade.status == "COMPLETED" %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-slate-700">Exchange complete. The coupon codes are no longer available in this room.</p>
+        </section>
+    {% elif trade.status == "DISPUTED" %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-slate-700">This exchange is quarantined for review.</p>
+        </section>
+    {% elif trade.status == "CANCELLED" %}
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-slate-700">This request was cancelled. No coupon codes were disclosed.</p>
+        </section>
+    {% endif %}
+</div>
+
+<script>
+function tradeTimer(expiresAtIso) {
+    return {
+        expiresAtMs: new Date(expiresAtIso).getTime(),
+        countdownText: '00:00',
+        init() {
+            this.update();
+            setInterval(() => this.update(), 1000);
+        },
+        update() {
+            const remainingSeconds = Math.max(0, Math.ceil((this.expiresAtMs - Date.now()) / 1000));
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            this.countdownText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            if (remainingSeconds === 0) {
+                window.location.reload();
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

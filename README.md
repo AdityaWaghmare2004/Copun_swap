@@ -4,13 +4,18 @@ A Django monolith for coupon exchange and trading.
 
 ## Environment setup
 
+Copy `.env.example` to `.env` and update the values for your environment before running the app:
+
 ```sh
+cp .env.example .env
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
 ```
+
+The project uses `django-environ` and reads configuration from `.env`. In production, `DJANGO_DEBUG` should remain `False`, and the secret key, database credentials, and AWS settings should be stored there rather than in source control.
 
 SQLite remains the default for local development. To use the PostgreSQL
 development container instead, start Docker Desktop and run:
@@ -32,6 +37,28 @@ production. Set the database connection variables through the deployment's
 secret manager in production. Stop the local container with
 `docker compose down`; persistent database data is stored in the
 `postgres_data` volume.
+
+## Docker container deployment
+
+The repository includes a `Dockerfile` that installs Tesseract OCR, installs the
+Python dependencies, and runs the Django app via Gunicorn.
+
+```sh
+docker build -t coupon-swap .
+docker run --rm -p 8000:8000 \
+  -e DJANGO_DEBUG=False \
+  -e DJANGO_SECRET_KEY=replace-me \
+  -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
+  -e DB_ENGINE=sqlite \
+  coupon-swap
+```
+
+For a full local stack, use the included `compose.yaml` to bring up PostgreSQL and
+the Django web app together:
+
+```sh
+docker compose up --build
+```
 
 ## S3 image storage
 

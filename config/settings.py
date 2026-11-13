@@ -11,20 +11,30 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import os
+
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-local-development-key-not-for-production",
+env = environ.Env(
+    DJANGO_DEBUG=(bool, False),
+    USE_S3_STORAGE=(bool, False),
 )
-if not DEBUG and "DJANGO_SECRET_KEY" not in os.environ:
+environ.Env.read_env(BASE_DIR / ".env")
+
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
+SECRET_KEY = env(
+    "DJANGO_SECRET_KEY",
+    default="change-me-to-a-long-random-secret-key",
+)
+if not DEBUG and not env("DJANGO_SECRET_KEY", default=""):
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in env(
+        "DJANGO_ALLOWED_HOSTS",
+        default="localhost,127.0.0.1",
+    ).split(",")
     if host.strip()
 ]
 
@@ -71,7 +81,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASE_ENGINE = os.environ.get("DB_ENGINE", "sqlite").lower()
+DATABASE_ENGINE = env("DB_ENGINE", default="sqlite").lower()
 if DATABASE_ENGINE == "sqlite":
     DATABASES = {
         "default": {
@@ -85,11 +95,11 @@ elif DATABASE_ENGINE == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ["DB_NAME"],
-            "USER": os.environ["DB_USER"],
-            "PASSWORD": os.environ["DB_PASSWORD"],
-            "HOST": os.environ["DB_HOST"],
-            "PORT": os.environ.get("DB_PORT", "5432"),
+            "NAME": env("DB_NAME"),
+            "USER": env("DB_USER"),
+            "PASSWORD": env("DB_PASSWORD"),
+            "HOST": env("DB_HOST", default="127.0.0.1"),
+            "PORT": env("DB_PORT", default="5432"),
         }
     }
 else:
@@ -97,15 +107,22 @@ else:
         "DB_ENGINE must be either 'sqlite' or 'postgresql'."
     )
 
-USE_S3_STORAGE = os.environ.get("USE_S3_STORAGE", "false").lower() == "true"
+USE_S3_STORAGE = env.bool("USE_S3_STORAGE", default=False)
 if USE_S3_STORAGE:
-    AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
-    if not AWS_STORAGE_BUCKET_NAME:
-        raise RuntimeError(
-            "AWS_STORAGE_BUCKET_NAME must be set when USE_S3_STORAGE is true."
-        )
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default=None)
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default=None)
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default=None)
+    if AWS_ACCESS_KEY_ID is not None:
+        os_env = {"AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY_ID}
+    else:
+        os_env = {}
+    if AWS_SECRET_ACCESS_KEY is not None:
+        os_env["AWS_SECRET_ACCESS_KEY"] = AWS_SECRET_ACCESS_KEY
+    if os_env:
+        import os
+        os.environ.update(os_env)
 
-    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME") or None
     s3_storage_options = {
         "bucket_name": AWS_STORAGE_BUCKET_NAME,
         "default_acl": None,

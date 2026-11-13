@@ -1,19 +1,17 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Propose a trade</title>
-</head>
-<body>
-    <main>
-        <h1>Propose a trade</h1>
-        <p>Choose one of your available coupons to offer for {{ requested_coupon.title }}.</p>
-        <p>The requested coupon will remain available until its owner accepts.</p>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Send trade request</button>
-        </form>
-    </main>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Propose a trade{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h1 class="mb-4 text-2xl font-semibold">Propose a trade</h1>
+    <p class="text-slate-600">Choose one of your available coupons to offer for {{ requested_coupon.title }}.</p>
+    <p class="mt-2 text-sm text-slate-600">The requested coupon will remain available until its owner accepts.</p>
+
+    <form method="post" class="mt-6 space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="rounded bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-500">Send trade request</button>
+    </form>
+</div>
+{% endblock %}
