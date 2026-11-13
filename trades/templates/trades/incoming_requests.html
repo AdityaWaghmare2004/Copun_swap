@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Incoming trade requests</title>
+</head>
+<body>
+    <main>
+        <h1>Incoming trade requests</h1>
+        <p><a href="{% url 'trades:dashboard' %}">Trade dashboard</a></p>
+        {% for message in messages %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
+        {% for trade in trades %}
+            <article>
+                <h2>Request from {{ trade.sender.username }}</h2>
+                <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }}</p>
+                <p>In exchange for your {{ trade.requested_coupon.title }}</p>
+                <a href="{% url 'trades:room' trade.pk %}">Review request</a>
+            </article>
+        {% empty %}
+            <p>You have no incoming requests.</p>
+        {% endfor %}
+    </main>
+</body>
+</html>

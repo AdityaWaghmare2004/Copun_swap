@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Confirm coupon details</title>
+</head>
+<body>
+    <main>
+        <h1>Confirm coupon details</h1>
+        <p>Review the details extracted from the proof image for “{{ title }}”.</p>
+        {% if ocr_notice %}
+            <p role="status">{{ ocr_notice }}</p>
+        {% endif %}
+        {% if ocr_text %}
+            <details>
+                <summary>Show extracted text</summary>
+                <pre>{{ ocr_text }}</pre>
+            </details>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="confirm">
+            {{ form.as_p }}
+            <button type="submit">Confirm and save coupon</button>
+        </form>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="cancel">
+            <input type="hidden" name="upload_token" value="{{ form.upload_token.value }}">
+            <button type="submit">Discard and start over</button>
+        </form>
+    </main>
+</body>
+</html>

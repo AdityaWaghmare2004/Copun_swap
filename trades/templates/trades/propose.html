@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Propose a trade</title>
+</head>
+<body>
+    <main>
+        <h1>Propose a trade</h1>
+        <p>Choose one of your available coupons to offer for {{ requested_coupon.title }}.</p>
+        <p>The requested coupon will remain available until its owner accepts.</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Send trade request</button>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Trade #{{ trade.pk }}</title>
+</head>
+<body>
+    <main>
+        <h1>Trade #{{ trade.pk }}</h1>
+        {% for message in messages %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
+        <p>Status: {{ trade.get_status_display }}</p>
+        <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }}</p>
+        <p>{{ trade.receiver.username }} offers {{ trade.requested_coupon.title }}</p>
+
+        {% if trade.status == "PROPOSED" and user.pk == trade.receiver_id %}
+            <form method="post" action="{% url 'trades:accept' trade.pk %}">
+                {% csrf_token %}
+                <button type="submit">Accept trade</button>
+            </form>
+            <form method="post" action="{% url 'trades:decline' trade.pk %}">
+                {% csrf_token %}
+                <button type="submit">Decline trade</button>
+            </form>
+        {% elif trade.status == "PROPOSED" %}
+            <p>Waiting for the receiver to respond. Your offered coupon is locked pending their decision.</p>
+        {% elif trade.status == "ACTIVE_EXCHANGE" %}
+            <p id="verification-timer" data-expires-at="{{ trade.expires_at|date:'c' }}">
+                Verification time remaining: <time>{{ trade.expires_at|timeuntil }}</time>
+            </p>
+            {% if offered_code %}
+                <section>
+                    <h2>Code received</h2>
+                    <code>{{ offered_code }}</code>
+                    <p>Apply this code on its platform before confirming.</p>
+                </section>
+            {% endif %}
+            {% if requested_code %}
+                <section>
+                    <h2>Code received</h2>
+                    <code>{{ requested_code }}</code>
+                    <p>Apply this code on its platform before confirming.</p>
+                </section>
+            {% endif %}
+            <form method="post" action="{% url 'trades:respond' trade.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="response" value="verified">
+                <button type="submit">Confirm Trade</button>
+            </form>
+            <form method="post" action="{% url 'trades:respond' trade.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="response" value="invalid">
+                <button type="submit">Report Invalid Code</button>
+            </form>
+            <script>
+                const timer = document.getElementById("verification-timer");
+                const time = timer.querySelector("time");
+                const deadline = Date.parse(timer.dataset.expiresAt);
+                const updateTimer = () => {
+                    const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                    time.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+                    if (remaining === 0) {
+                        window.location.reload();
+                    }
+                };
+                updateTimer();
+                window.setInterval(updateTimer, 1000);
+            </script>
+        {% elif trade.status == "COMPLETED" %}
+            <p>Exchange complete. The coupon codes are no longer available in this room.</p>
+        {% elif trade.status == "DISPUTED" %}
+            <p>This exchange is quarantined for review.</p>
+        {% elif trade.status == "CANCELLED" %}
+            <p>This request was cancelled. No coupon codes were disclosed.</p>
+        {% endif %}
+    </main>
+</body>
+</html>

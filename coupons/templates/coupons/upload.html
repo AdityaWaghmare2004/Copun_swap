@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Upload a coupon</title>
+</head>
+<body>
+    <main>
+        <h1>Upload a coupon</h1>
+        {% for message in messages %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Upload and scan</button>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Your profile</title>
+</head>
+<body>
+    <main>
+        <h1>{{ user.username }}'s profile</h1>
+        <p><a href="{% url 'trades:dashboard' %}">Open trade dashboard</a></p>
+        <dl>
+            <dt>Trust score</dt>
+            <dd>{{ user.trust_score }}</dd>
+            <dt>Successful trades</dt>
+            <dd>{{ user.successful_trades_count }}</dd>
+            <dt>Disputed trades</dt>
+            <dd>{{ user.disputed_trades_count }}</dd>
+        </dl>
+        {% if user.requires_review %}
+            <p role="status">Your account is flagged for review after repeated trade timeouts.</p>
+        {% endif %}
+        <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit">Log out</button>
+        </form>
+    </main>
+</body>
+</html>

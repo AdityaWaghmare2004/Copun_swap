@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Trade dashboard</title>
+</head>
+<body>
+    <main>
+        <h1>{{ user.username }}'s trade dashboard</h1>
+        {% if user.requires_review %}
+            <p role="status">Your account is flagged for administrative review.</p>
+        {% endif %}
+
+        <section>
+            <h2>Active listings</h2>
+            {% for coupon in listings %}
+                <article>
+                    <h3>{{ coupon.title }}</h3>
+                    <p>{{ coupon.category__name }} on {{ coupon.platform__name }}</p>
+                    <p>Expires {{ coupon.expiry_date }}</p>
+                </article>
+            {% empty %}
+                <p>You have no active listings.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Incoming requests</h2>
+            {% for trade in incoming_requests %}
+                <article>
+                    <p>{{ trade.sender.username }} offers {{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
+                    <a href="{% url 'trades:room' trade.pk %}">Review request</a>
+                </article>
+            {% empty %}
+                <p>No incoming requests.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Outgoing requests</h2>
+            {% for trade in outgoing_requests %}
+                <article>
+                    <p>Your {{ trade.offered_coupon.title }} for {{ trade.receiver.username }}'s {{ trade.requested_coupon.title }}</p>
+                    <a href="{% url 'trades:room' trade.pk %}">View request</a>
+                </article>
+            {% empty %}
+                <p>No outgoing requests.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Active exchanges</h2>
+            {% for trade in active_trades %}
+                <article>
+                    <p>Trade #{{ trade.pk }} — {{ trade.get_status_display }}</p>
+                    <p>Verification deadline: {{ trade.expires_at }}</p>
+                    <a href="{% url 'trades:room' trade.pk %}">Open private trade room</a>
+                </article>
+            {% empty %}
+                <p>No active exchanges.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Trade history</h2>
+            {% for trade in trade_history %}
+                <article>
+                    <h3>Trade #{{ trade.pk }} — {{ trade.get_status_display }}</h3>
+                    <p>{{ trade.offered_coupon.title }} for {{ trade.requested_coupon.title }}</p>
+                    <p>Updated {{ trade.updated_at }}</p>
+                    {% if trade.dispute_reason %}
+                        <p>Resolution: {{ trade.get_dispute_reason_display }}</p>
+                    {% endif %}
+                    <a href="{% url 'trades:room' trade.pk %}">View record</a>
+                </article>
+            {% empty %}
+                <p>No completed or resolved trades yet.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Audit history</h2>
+            {% for event in audit_events %}
+                <article>
+                    <p>
+                        Trade #{{ event.trade_id }}:
+                        {{ event.get_event_type_display }}
+                        {% if event.actor %}by {{ event.actor.username }}{% endif %}
+                        at {{ event.created_at }}
+                    </p>
+                </article>
+            {% empty %}
+                <p>No trade events recorded.</p>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+</html>
