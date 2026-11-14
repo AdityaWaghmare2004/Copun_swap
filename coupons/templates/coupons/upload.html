@@ -3,88 +3,171 @@
 {% block title %}List a coupon | Coupun Swap{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-4xl">
+<div class="mx-auto max-w-2xl">
     <div class="mb-7">
         <a href="{% url 'coupons:marketplace' %}" class="text-sm font-medium text-indigo-700 hover:text-indigo-900">&lt; Back to marketplace</a>
         <p class="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">Share a deal</p>
         <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">List your coupon</h1>
-        <p class="mt-2 max-w-2xl leading-6 text-slate-600">Add the details and a clear photo. Your secret code stays private until a trade is accepted.</p>
+        <p class="mt-2 leading-6 text-slate-600">Just upload a clear photo or screenshot. We read the code, expiry date, platform and terms for you. Your secret code stays private until a trade is accepted.</p>
     </div>
 
-    <form method="post" enctype="multipart/form-data" x-data="previewUpload()" x-init="bindFileInput()" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <form method="post" enctype="multipart/form-data" x-data="couponReader()" x-init="bindFileInput()" @submit="onSubmit($event)" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="border-b border-rose-200 bg-rose-50 px-6 py-4 text-sm text-rose-800" role="alert">{{ form.non_field_errors }}</div>
         {% endif %}
-        <div class="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_0.85fr]">
-            <div class="space-y-5">
-                <div>
-                    <label for="{{ form.title.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Coupon title</label>
-                    {{ form.title }}
-                    {% for error in form.title.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="{{ form.category.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-                        {{ form.category }}
-                        {% for error in form.category.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
-                    </div>
-                    <div>
-                        <label for="{{ form.platform.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Platform</label>
-                        {{ form.platform }}
-                        {% for error in form.platform.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
-                    </div>
-                </div>
-                <div>
-                    <label for="{{ form.terms.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Terms <span class="font-normal text-slate-400">(optional)</span></label>
-                    {{ form.terms }}
-                    {% for error in form.terms.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
-                </div>
+        <div class="p-6 sm:p-8">
+            <label for="{{ form.proof_image.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Coupon photo</label>
+            <div class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-indigo-400">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl text-indigo-700 shadow-sm" aria-hidden="true">+</div>
+                <p class="mt-3 font-semibold text-slate-800">Choose a coupon image</p>
+                <p class="mb-4 mt-1 text-sm text-slate-500">JPEG, PNG, or WebP, up to 10 MB</p>
+                {{ form.proof_image }}
             </div>
+            {% for error in form.proof_image.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
 
-            <div>
-                <label for="{{ form.proof_image.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">Coupon photo</label>
-                <div class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-indigo-400">
-                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl text-indigo-700 shadow-sm" aria-hidden="true">+</div>
-                    <p class="mt-3 font-semibold text-slate-800">Choose a coupon image</p>
-                    <p class="mb-4 mt-1 text-sm text-slate-500">JPEG, PNG, or WebP, up to 10 MB</p>
-                    {{ form.proof_image }}
-                </div>
-                {% for error in form.proof_image.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
-                <div x-cloak x-show="previewUrl" class="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Image preview</p>
-                    <img :src="previewUrl" alt="Preview of the selected coupon image" class="max-h-64 w-full rounded-lg object-contain">
-                </div>
+            {{ form.ocr_text }}
+            {{ form.ocr_status }}
+
+            <div x-cloak x-show="previewUrl" class="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                <img :src="previewUrl" alt="Preview of the selected coupon image" class="max-h-64 w-full rounded-lg object-contain">
+                <p x-cloak x-show="state === 'reading'" class="mt-3 text-sm text-slate-600" role="status">
+                    Reading your coupon<span x-show="progress > 0"> (<span x-text="progress"></span>%)</span>&hellip;
+                </p>
+                <p x-cloak x-show="state === 'done'" class="mt-3 text-sm text-emerald-700" role="status">Done. Continue to review the details.</p>
+                <p x-cloak x-show="state === 'failed'" class="mt-3 text-sm text-amber-700" role="status">Could not read it here, so we will try on our side when you continue.</p>
             </div>
         </div>
         <div class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <p class="text-xs leading-5 text-slate-500">Your photo is private and used to verify the listing.</p>
-            <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Continue to code review</button>
+            <p class="text-xs leading-5 text-slate-500">Your photo is read in your browser and kept private to verify the listing.</p>
+            <button type="submit" :disabled="waiting" class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70">
+                <span x-show="!waiting">Continue to review</span>
+                <span x-cloak x-show="waiting">Reading your coupon&hellip;</span>
+            </button>
         </div>
     </form>
 </div>
 
 <script>
-function previewUpload() {
+// Reads the coupon image in the browser with Tesseract.js (WebAssembly), so the
+// server does no OCR work. The text goes to the server in two hidden fields.
+const TESSERACT_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+const TESSERACT_LANG_PATH = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int';
+const OCR_MAX_SIDE = 2000;
+const OCR_TIMEOUT_MS = 45000;
+const OCR_MAX_CHARS = 20000;
+
+let tesseractLoading = null;
+function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (!tesseractLoading) {
+        tesseractLoading = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = TESSERACT_SRC;
+            script.onload = resolve;
+            script.onerror = () => { tesseractLoading = null; reject(new Error('load')); };
+            document.head.appendChild(script);
+        });
+    }
+    return tesseractLoading;
+}
+
+async function imageToCanvas(file) {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, OCR_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    if (bitmap.close) bitmap.close();
+    return canvas;
+}
+
+function couponReader() {
     return {
         previewUrl: '',
         previousUrl: '',
+        state: 'idle',        // idle | reading | done | failed
+        progress: 0,
+        submitAfter: false,
+        current: null,
+        get waiting() { return this.state === 'reading' && this.submitAfter; },
         bindFileInput() {
             const input = this.$el.querySelector('input[type="file"][name="proof_image"]');
             if (!input) return;
-            input.addEventListener('change', (event) => this.previewImage(event));
+            input.addEventListener('change', (event) => this.onFile(event));
         },
-        previewImage(event) {
+        onFile(event) {
             const file = event.target.files && event.target.files[0];
             if (this.previousUrl) URL.revokeObjectURL(this.previousUrl);
+            this.setResult('', '');
+            this.submitAfter = false;
             if (!file) {
-                this.previewUrl = '';
-                this.previousUrl = '';
+                this.previewUrl = this.previousUrl = '';
+                this.state = 'idle';
                 return;
             }
             this.previousUrl = URL.createObjectURL(file);
             this.previewUrl = this.previousUrl;
-        }
+            this.read(file);
+        },
+        setResult(status, text) {
+            this.$el.querySelector('[name="ocr_status"]').value = status;
+            this.$el.querySelector('[name="ocr_text"]').value = text;
+        },
+        async read(file) {
+            const token = {};
+            this.current = token;
+            this.state = 'reading';
+            this.progress = 0;
+            const outcome = await this.recognize(file);
+            if (this.current !== token) return;      // a newer image replaced this one
+            this.setResult(outcome.status, outcome.text);
+            this.state = outcome.status === 'done' ? 'done' : 'failed';
+            if (this.submitAfter) {
+                this.submitAfter = false;
+                this.$el.requestSubmit();
+            }
+        },
+        async recognize(file) {
+            let worker = null;
+            let timer = null;
+            try {
+                await loadTesseract();
+                const canvas = await imageToCanvas(file);
+                const timeout = new Promise((_, reject) => {
+                    timer = setTimeout(() => reject(new Error('timeout')), OCR_TIMEOUT_MS);
+                });
+                const work = (async () => {
+                    worker = await Tesseract.createWorker('eng', 1, {
+                        langPath: TESSERACT_LANG_PATH,
+                        logger: (m) => {
+                            if (m.status === 'recognizing text') this.progress = Math.round(m.progress * 100);
+                        },
+                    });
+                    const result = await worker.recognize(canvas);
+                    return result.data.text;
+                })();
+                const text = await Promise.race([work, timeout]);
+                return { status: 'done', text: String(text).slice(0, OCR_MAX_CHARS) };
+            } catch (error) {
+                const timedOut = error && error.message === 'timeout';
+                return { status: timedOut ? 'timeout' : 'failed', text: '' };
+            } finally {
+                clearTimeout(timer);
+                if (worker) worker.terminate().catch(() => {});
+            }
+        },
+        onSubmit(event) {
+            // Let the reading finish first, then submit automatically.
+            if (this.state === 'reading') {
+                event.preventDefault();
+                this.submitAfter = true;
+            }
+        },
     };
 }
 </script>

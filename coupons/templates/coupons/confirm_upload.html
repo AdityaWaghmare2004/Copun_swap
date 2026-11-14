@@ -6,7 +6,7 @@
 <div class="mx-auto max-w-3xl space-y-6">
     <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 class="mb-3 text-2xl font-semibold">Confirm coupon details</h1>
-        <p class="text-slate-600">Review the details extracted from the proof image for “{{ title }}”.</p>
+        <p class="text-slate-600">We filled these in from your image. Fix anything that looks wrong, then confirm.</p>
 
         {% if ocr_notice %}
             <p role="status" class="mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{{ ocr_notice }}</p>
@@ -21,10 +21,20 @@
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form method="post" class="space-y-4">
+        <form method="post" class="space-y-5">
             {% csrf_token %}
             <input type="hidden" name="step" value="confirm">
-            {{ form.as_p }}
+            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            {% if form.non_field_errors %}
+                <p class="rounded border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">{{ form.non_field_errors }}</p>
+            {% endif %}
+            {% for field in form.visible_fields %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-slate-700">{{ field.label }}{% if not field.field.required %} <span class="font-normal text-slate-400">(optional)</span>{% endif %}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="mt-1.5 text-sm text-rose-700">{{ error }}</p>{% endfor %}
+                </div>
+            {% endfor %}
             <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500">Confirm and save coupon</button>
         </form>
 

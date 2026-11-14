@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,12 +11,12 @@ from django.db import IntegrityError, models, transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.utils.dateparse import parse_date
 from PIL import Image
 
 from .forms import CouponConfirmationForm, CouponUploadForm, MarketplaceFilterForm
 from .models import Coupon, hash_coupon_code
-from .services.ocr import extract_coupon_data
+from .services.autofill import build_autofill
+from .services.ocr import OCRBusyError, OCRTimeoutError, extract_coupon_data
 
 
 def _pending_storage():
@@ -84,34 +84,12 @@ def marketplace(request):
     )
 
 
-def _parse_ocr_date(value):
-    parsed = parse_date(value)
-    if parsed is not None:
-        return parsed
-    for date_format in (
-        "%d/%m/%Y",
-        "%m/%d/%Y",
-        "%d-%m-%Y",
-        "%m-%d-%Y",
-        "%B %d, %Y",
-        "%b %d, %Y",
-        "%d %B %Y",
-        "%d %b %Y",
-    ):
-        try:
-            return datetime.strptime(value, date_format).date()
-        except ValueError:
-            continue
-    return None
-
-
 def _render_confirmation(request, pending_upload, form, ocr_notice=None, ocr_text=""):
     return render(
         request,
         "coupons/confirm_upload.html",
         {
             "form": form,
-            "title": pending_upload["title"],
             "ocr_notice": ocr_notice,
             "ocr_text": ocr_text,
         },
@@ -138,30 +116,14 @@ def upload_coupon(request):
         pending_upload = {
             "file_name": pending_file_name,
             "owner_id": request.user.pk,
-            "title": form.cleaned_data["title"],
-            "category_id": form.cleaned_data["category"].pk,
-            "platform_id": form.cleaned_data["platform"].pk,
-            "terms": form.cleaned_data["terms"],
         }
 
-        ocr_notice = None
-        ocr_text = ""
-        try:
-            with pending_storage.open(pending_file_name, "rb") as stored_image:
-                result = extract_coupon_data(stored_image)
-            ocr_text = result.text
-        except pytesseract.TesseractNotFoundError:
-            result = None
-            ocr_notice = (
-                "OCR is unavailable because Tesseract is not installed. "
-                "You can enter the code and expiry date manually."
-            )
-        except pytesseract.TesseractError:
-            result = None
-            ocr_notice = (
-                "OCR could not read this image. You can enter the code and "
-                "expiry date manually."
-            )
+        ocr_text, ocr_notice = _read_coupon_text(
+            form.cleaned_data["ocr_status"],
+            form.cleaned_data["ocr_text"],
+            pending_storage,
+            pending_file_name,
+        )
 
         uploads = request.session.get("pending_coupon_uploads", {})
         if not isinstance(uploads, dict):
@@ -169,24 +131,46 @@ def upload_coupon(request):
         uploads[token] = pending_upload
         request.session["pending_coupon_uploads"] = uploads
 
-        initial = {"upload_token": token}
-        if result is not None:
-            if result.codes:
-                initial["code"] = result.codes[0]
-            if result.dates:
-                parsed_date = _parse_ocr_date(result.dates[0])
-                if parsed_date is not None:
-                    initial["expiry_date"] = parsed_date
-        confirmation_form = CouponConfirmationForm(initial=initial)
+        initial = build_autofill(ocr_text).as_initial()
+        initial["upload_token"] = token
         return _render_confirmation(
             request,
             pending_upload,
-            confirmation_form,
+            CouponConfirmationForm(initial=initial),
             ocr_notice,
             ocr_text,
         )
 
     return render(request, "coupons/upload.html", {"form": form})
+
+
+def _read_coupon_text(client_status, client_text, pending_storage, file_name):
+    """Return (text, notice) for the uploaded image.
+
+    The browser normally reads the image itself, which keeps the server free.
+    Server-side OCR is only a fallback for when that did not happen (script
+    blocked, library failed to load, JavaScript disabled).
+    """
+    manual = "You can check and complete the details below."
+    if client_status == "done":
+        if client_text.strip():
+            return client_text, None
+        return "", f"We could not find readable text in this image. {manual}"
+    if client_status == "timeout":
+        return "", f"Reading the image took too long. {manual}"
+
+    try:
+        with pending_storage.open(file_name, "rb") as stored_image:
+            result = extract_coupon_data(stored_image)
+        return result.text, None
+    except pytesseract.TesseractNotFoundError:
+        return "", f"Automatic reading is unavailable right now. {manual}"
+    except OCRTimeoutError:
+        return "", f"Reading the image took too long. {manual}"
+    except OCRBusyError:
+        return "", f"The reader is busy with another upload. {manual}"
+    except (pytesseract.TesseractError, OSError, Image.DecompressionBombError):
+        return "", f"We could not read this image. {manual}"
 
 
 def _confirm_coupon(request):
@@ -214,10 +198,10 @@ def _confirm_coupon(request):
     pending_storage = _pending_storage()
     coupon = Coupon(
         owner=request.user,
-        title=pending_upload["title"],
-        category_id=pending_upload["category_id"],
-        platform_id=pending_upload["platform_id"],
-        terms=pending_upload["terms"],
+        title=form.cleaned_data["title"],
+        category=form.cleaned_data["category"],
+        platform=form.cleaned_data["platform"],
+        terms=form.cleaned_data["terms"],
         code=code,
         expiry_date=form.cleaned_data["expiry_date"],
     )

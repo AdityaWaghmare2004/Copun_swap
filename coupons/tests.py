@@ -16,7 +16,7 @@ from PIL import Image
 
 from .forms import CouponUploadForm, MAX_COUPON_IMAGE_SIZE
 from .models import Category, Coupon, Platform
-from .services.ocr import ParsedCouponText
+from .services.ocr import OCRBusyError, OCRTimeoutError, ParsedCouponText
 from .views import _pending_storage
 
 
@@ -265,6 +265,10 @@ class CouponUploadTests(TestCase):
             {
                 "step": "confirm",
                 "upload_token": token,
+                "title": "Lunch voucher",
+                "platform": self.platform.pk,
+                "category": self.category.pk,
+                "terms": "One use only",
                 "code": "SAVE-20",
                 "expiry_date": "2030-12-31",
             },
@@ -274,6 +278,9 @@ class CouponUploadTests(TestCase):
         coupon = Coupon.objects.get(owner=self.owner)
         self.assertEqual(coupon.code, "SAVE20")
         self.assertEqual(coupon.terms, "One use only")
+        self.assertEqual(coupon.title, "Lunch voucher")
+        self.assertEqual(coupon.platform, self.platform)
+        self.assertEqual(coupon.category, self.category)
         self.assertTrue(coupon.proof_image.storage.exists(coupon.proof_image.name))
         self.assertNotIn(token, self.client.session.get("pending_coupon_uploads", {}))
         self.assertFalse(
@@ -603,6 +610,147 @@ class CouponUploadValidationTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("Image must be no larger than 10 MB.", form.errors["proof_image"])
 
+    def test_upload_rejects_images_over_pixel_limit(self):
+        with patch("coupons.forms.MAX_COUPON_IMAGE_PIXELS", 100):
+            form = CouponUploadForm(
+                data={
+                    "title": "Lunch voucher",
+                    "category": self.category.pk,
+                    "platform": self.platform.pk,
+                },
+                files={"proof_image": self._image_upload()},  # 20x20 = 400 px
+            )
+            self.assertFalse(form.is_valid())
+        self.assertIn("Image resolution is too high", form.errors["proof_image"][0])
+
+    def test_upload_accepts_images_at_pixel_limit(self):
+        with patch("coupons.forms.MAX_COUPON_IMAGE_PIXELS", 400):
+            form = CouponUploadForm(
+                data={
+                    "title": "Lunch voucher",
+                    "category": self.category.pk,
+                    "platform": self.platform.pk,
+                },
+                files={"proof_image": self._image_upload()},
+            )
+            self.assertTrue(form.is_valid(), form.errors)
+
+    def _post_upload_with_ocr_error(self, error):
+        with patch("coupons.views.extract_coupon_data", side_effect=error):
+            return self.client.post(
+                reverse("coupons:upload"),
+                {
+                    "title": "Lunch voucher",
+                    "category": self.category.pk,
+                    "platform": self.platform.pk,
+                    "terms": "",
+                    "proof_image": self._image_upload(),
+                },
+            )
+
+    def test_ocr_timeout_allows_manual_confirmation_with_notice(self):
+        response = self._post_upload_with_ocr_error(OCRTimeoutError())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Reading the image took too long")
+        self.assertContains(response, 'name="code"')
+        self.assertIn("pending_coupon_uploads", self.client.session)
+
+    def test_ocr_busy_allows_manual_confirmation_with_notice(self):
+        response = self._post_upload_with_ocr_error(OCRBusyError())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The reader is busy")
+        self.assertContains(response, 'name="expiry_date"')
+
+    def _post_upload(self, **extra):
+        return self.client.post(
+            reverse("coupons:upload"),
+            {"proof_image": self._image_upload(), **extra},
+        )
+
+    def test_upload_needs_only_the_image(self):
+        with patch(
+            "coupons.views.extract_coupon_data",
+            return_value=ParsedCouponText(text="", codes=(), dates=()),
+        ):
+            response = self._post_upload()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm coupon details")
+
+    def test_browser_ocr_text_autofills_every_confirmation_field(self):
+        food, _ = Category.objects.get_or_create(name="Food & Dining")
+        zomato, _ = Platform.objects.get_or_create(name="Zomato")
+        text = "ZOMATO 20% OFF\nUse code: SAVE20X\nValid till 15 April 2027\nMinimum order Rs 199"
+
+        with patch("coupons.views.extract_coupon_data") as server_ocr:
+            response = self._post_upload(ocr_status="done", ocr_text=text)
+
+        server_ocr.assert_not_called()
+        initial = response.context["form"].initial
+        self.assertEqual(initial["code"], "SAVE20X")
+        self.assertEqual(str(initial["expiry_date"]), "2027-04-15")
+        self.assertEqual(initial["platform"], zomato.pk)
+        self.assertEqual(initial["category"], food.pk)
+        self.assertEqual(initial["title"], "Zomato 20% off")
+        self.assertIn("Minimum order", initial["terms"])
+
+    def test_browser_ocr_with_no_text_shows_notice(self):
+        with patch("coupons.views.extract_coupon_data") as server_ocr:
+            response = self._post_upload(ocr_status="done", ocr_text="  ")
+
+        server_ocr.assert_not_called()
+        self.assertContains(response, "could not find readable text")
+
+    def test_browser_ocr_timeout_skips_server_ocr(self):
+        with patch("coupons.views.extract_coupon_data") as server_ocr:
+            response = self._post_upload(ocr_status="timeout")
+
+        server_ocr.assert_not_called()
+        self.assertContains(response, "Reading the image took too long")
+
+    def test_server_ocr_is_the_fallback_when_browser_ocr_failed_or_is_missing(self):
+        result = ParsedCouponText(text="Use code SAVE20", codes=("SAVE20",), dates=())
+        for extra in ({}, {"ocr_status": "failed"}, {"ocr_status": "bogus"}):
+            with self.subTest(extra=extra), patch(
+                "coupons.views.extract_coupon_data", return_value=result
+            ) as server_ocr:
+                response = self._post_upload(**extra)
+
+            server_ocr.assert_called_once()
+            self.assertEqual(response.context["form"].initial["code"], "SAVE20")
+
+    def test_oversized_browser_text_is_truncated(self):
+        from .forms import MAX_CLIENT_OCR_CHARS
+
+        form = CouponUploadForm(
+            data={"ocr_text": "A" * (MAX_CLIENT_OCR_CHARS + 500), "ocr_status": "done"},
+            files={"proof_image": self._image_upload()},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.cleaned_data["ocr_text"]), MAX_CLIENT_OCR_CHARS)
+
+    def test_confirmation_requires_title_platform_and_category(self):
+        self._start_upload()
+        token = next(iter(self.client.session["pending_coupon_uploads"]))
+
+        response = self.client.post(
+            reverse("coupons:upload"),
+            {
+                "step": "confirm",
+                "upload_token": token,
+                "code": "SAVE20",
+                "expiry_date": "2030-12-31",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Coupon.objects.count(), 0)
+        for field in ("title", "platform", "category"):
+            self.assertIn(field, response.context["form"].errors)
+
     def test_duplicate_code_is_reported_during_confirmation(self):
         Coupon.objects.create(
             owner=self.owner,
@@ -621,6 +769,10 @@ class CouponUploadValidationTests(TestCase):
             {
                 "step": "confirm",
                 "upload_token": token,
+                "title": "Lunch voucher",
+                "platform": self.platform.pk,
+                "category": self.category.pk,
+                "terms": "One use only",
                 "code": "SAVE-20",
                 "expiry_date": "2030-12-31",
             },
@@ -648,7 +800,7 @@ class CouponUploadValidationTests(TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "OCR is unavailable")
+        self.assertContains(response, "Automatic reading is unavailable")
         self.assertContains(response, 'name="code"')
         self.assertContains(response, 'name="expiry_date"')
 
@@ -669,7 +821,7 @@ class CouponUploadValidationTests(TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "OCR could not read this image")
+        self.assertContains(response, "We could not read this image")
         self.assertContains(response, 'name="code"')
         self.assertContains(response, 'name="expiry_date"')
 
