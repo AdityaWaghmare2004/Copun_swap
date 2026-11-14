@@ -710,9 +710,19 @@ class CouponUploadValidationTests(TestCase):
         server_ocr.assert_not_called()
         self.assertContains(response, "Reading the image took too long")
 
-    def test_server_ocr_is_the_fallback_when_browser_ocr_failed_or_is_missing(self):
+    def test_browser_ocr_failure_uses_manual_entry_instead_of_server_fallback(self):
+        for status in ("failed", "manual"):
+            with self.subTest(status=status), patch(
+                "coupons.views.extract_coupon_data"
+            ) as server_ocr:
+                response = self._post_upload(ocr_status=status)
+
+            server_ocr.assert_not_called()
+            self.assertContains(response, "Automatic reading did not finish")
+
+    def test_server_ocr_is_the_fallback_when_browser_ocr_is_missing(self):
         result = ParsedCouponText(text="Use code SAVE20", codes=("SAVE20",), dates=())
-        for extra in ({}, {"ocr_status": "failed"}, {"ocr_status": "bogus"}):
+        for extra in ({}, {"ocr_status": "bogus"}):
             with self.subTest(extra=extra), patch(
                 "coupons.views.extract_coupon_data", return_value=result
             ) as server_ocr:

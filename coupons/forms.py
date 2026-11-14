@@ -26,7 +26,7 @@ FIELD_CLASSES = (
 )
 # Text read in the browser is capped; anything longer is cut, not rejected.
 MAX_CLIENT_OCR_CHARS = 20_000
-CLIENT_OCR_STATUSES = {"done", "failed", "timeout"}
+CLIENT_OCR_STATUSES = {"done", "failed", "manual", "timeout"}
 
 
 class CouponUploadForm(forms.Form):

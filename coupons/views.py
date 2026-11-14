@@ -158,6 +158,8 @@ def _read_coupon_text(client_status, client_text, pending_storage, file_name):
         return "", f"We could not find readable text in this image. {manual}"
     if client_status == "timeout":
         return "", f"Reading the image took too long. {manual}"
+    if client_status in {"failed", "manual"}:
+        return "", f"Automatic reading did not finish. {manual}"
 
     try:
         with pending_storage.open(file_name, "rb") as stored_image:
