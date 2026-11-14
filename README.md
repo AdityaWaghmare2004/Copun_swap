@@ -15,7 +15,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-The project uses `django-environ` and reads configuration from `.env`. In production, `DJANGO_DEBUG` should remain `False`, and the secret key, database credentials, and AWS settings should be stored there rather than in source control.
+The project uses `django-environ` and reads configuration from `.env`. In production, `DJANGO_DEBUG` should remain `False`, and the secret key and database credentials should be stored in the host's environment settings rather than in source control.
 
 SQLite remains the default for local development. To use the PostgreSQL
 development container instead, start Docker Desktop and run:
@@ -81,8 +81,11 @@ identity only the required bucket permissions. Image URLs are signed rather
 than public. Configure an S3 lifecycle rule to expire abandoned objects under
 `coupons/pending/`.
 
-For deployment, set `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, and
-`DJANGO_ALLOWED_HOSTS` to a comma-separated list of hostnames. Uploaded media is
+For Render deployment, set `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, and
+`DJANGO_ALLOWED_HOSTS` to include your service hostname (for example
+`your-service.onrender.com`). When Render provides `DATABASE_URL`, the app uses
+it in preference to the separate `DB_*` settings. WhiteNoise serves collected
+static files from the app container. Uploaded media is
 served by Django only in debug mode; production deployments should route media
 through a dedicated web server or storage service.
 

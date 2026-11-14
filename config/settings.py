@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+import dj_database_url
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,12 +30,15 @@ SECRET_KEY = env(
 )
 if not DEBUG and not env("DJANGO_SECRET_KEY", default=""):
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
+configured_allowed_hosts = env("ALLOWED_HOSTS", default=None)
+if configured_allowed_hosts is None:
+    configured_allowed_hosts = env(
+        "DJANGO_ALLOWED_HOSTS",
+        default="localhost,127.0.0.1,.onrender.com",
+    )
 ALLOWED_HOSTS = [
     host.strip()
-    for host in env(
-        "DJANGO_ALLOWED_HOSTS",
-        default="localhost,127.0.0.1",
-    ).split(",")
+    for host in configured_allowed_hosts.split(",")
     if host.strip()
 ]
 
@@ -53,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -60,6 +65,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 ROOT_URLCONF = "config.urls"
 
@@ -82,7 +88,15 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 DATABASE_ENGINE = env("DB_ENGINE", default="sqlite").lower()
-if DATABASE_ENGINE == "sqlite":
+DATABASE_URL = env("DATABASE_URL", default="")
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+        )
+    }
+elif DATABASE_ENGINE == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -139,7 +153,7 @@ if USE_S3_STORAGE:
             "OPTIONS": {**s3_storage_options, "location": "coupons/proofs"},
         },
         "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
         "coupons_pending": {
             "BACKEND": "storages.backends.s3.S3Storage",
@@ -152,7 +166,7 @@ else:
             "BACKEND": "django.core.files.storage.FileSystemStorage",
         },
         "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
 
